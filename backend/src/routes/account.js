@@ -1,6 +1,6 @@
 import express from 'express';
 import { body, param, validationResult } from 'express-validator';
-import { publicClient, SIMPLE_ACCOUNT_FACTORY_ABI } from '../config/blockchain.js';
+import { getWalletClient, publicClient, SIMPLE_ACCOUNT_FACTORY_ABI } from '../config/blockchain.js';
 import logger from '../utils/logger.js';
 
 const router = express.Router();
@@ -132,6 +132,87 @@ router.post(
                 message: isDeployed ? 'Account already exists' : 'Account address computed. Deploy via UserOp with initCode.'
             });
         } catch (error) {
+            next(error);
+        }
+    }
+);
+
+/**
+ * POST /api/account/deploy
+ * Deploy a smart account on-chain
+ */
+router.post(
+    '/deploy',
+    [
+        body('owner').isEthereumAddress().withMessage('Invalid owner address'),
+        body('salt').optional().isNumeric().withMessage('Salt must be numeric')
+    ],
+    async (req, res, next) => {
+        try {
+            const errors = validationResult(req);
+            if (!errors.isEmpty()) {
+                return res.status(400).json({ errors: errors.array() });
+            }
+
+            const { owner, salt = 0 } = req.body;
+
+            if (!FACTORY_ADDRESS || FACTORY_ADDRESS === '0x0000000000000000000000000000000000000000') {
+                return res.status(500).json({
+                    error: 'Factory contract not deployed',
+                    message: 'Please deploy contracts first'
+                });
+            }
+
+            // Get the counterfactual address
+            const accountAddress = await publicClient.readContract({
+                address: FACTORY_ADDRESS,
+                abi: SIMPLE_ACCOUNT_FACTORY_ABI,
+                functionName: 'getAddress',
+                args: [owner, BigInt(salt)]
+            });
+
+            // Check if already deployed
+            const code = await publicClient.getBytecode({ address: accountAddress });
+            if (code && code !== '0x') {
+                logger.info(`Account ${accountAddress} is already deployed`);
+                return res.json({
+                    address: accountAddress,
+                    owner,
+                    salt,
+                    isDeployed: true,
+                    message: 'Account already deployed'
+                });
+            }
+
+            // Deploy the account using wallet client
+            logger.info(`Deploying account for owner ${owner} with salt ${salt}...`);
+
+            const walletClient = getWalletClient();
+            const hash = await walletClient.writeContract({
+                address: FACTORY_ADDRESS,
+                abi: SIMPLE_ACCOUNT_FACTORY_ABI,
+                functionName: 'createAccount',
+                args: [owner, BigInt(salt)]
+            });
+
+            logger.info(`Account deployment transaction sent: ${hash}`);
+
+            // Wait for transaction receipt
+            const receipt = await publicClient.waitForTransactionReceipt({ hash });
+
+            logger.info(`Account deployed at ${accountAddress} in block ${receipt.blockNumber}`);
+
+            res.json({
+                address: accountAddress,
+                owner,
+                salt,
+                isDeployed: true,
+                transactionHash: hash,
+                blockNumber: receipt.blockNumber.toString(),
+                message: 'Account successfully deployed on-chain'
+            });
+        } catch (error) {
+            logger.error(`Error deploying account: ${error.message}`);
             next(error);
         }
     }

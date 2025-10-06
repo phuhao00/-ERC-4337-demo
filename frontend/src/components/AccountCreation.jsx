@@ -30,7 +30,7 @@ export default function AccountCreation({ ownerAddress, onAccountCreated }) {
 
             setResult(data)
             if (data.address) {
-                onAccountCreated(data.address)
+                onAccountCreated(data.address, salt)
             }
         } catch (err) {
             setError(err.message)
@@ -53,7 +53,7 @@ export default function AccountCreation({ ownerAddress, onAccountCreated }) {
 
             setResult(data)
             if (data.address) {
-                onAccountCreated(data.address)
+                onAccountCreated(data.address, salt)
             }
         } catch (err) {
             setError(err.message)

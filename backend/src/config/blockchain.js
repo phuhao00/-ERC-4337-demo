@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
-import { createPublicClient, http, parseAbi } from 'viem';
+import { createPublicClient, createWalletClient, http, parseAbi } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import { sepolia } from 'viem/chains';
+import { hardhat, sepolia } from 'viem/chains';
 
 dotenv.config();
 
@@ -9,10 +9,12 @@ dotenv.config();
 const getChain = () => {
     const chainId = parseInt(process.env.CHAIN_ID || '11155111');
     switch (chainId) {
+        case 31337:
+            return hardhat;
         case 11155111:
             return sepolia;
         default:
-            return sepolia;
+            return hardhat; // Default to hardhat for local development
     }
 };
 
@@ -20,6 +22,15 @@ export const publicClient = createPublicClient({
     chain: getChain(),
     transport: http(process.env.RPC_URL)
 });
+
+export const getWalletClient = () => {
+    const account = getPaymasterSigner();
+    return createWalletClient({
+        account,
+        chain: getChain(),
+        transport: http(process.env.RPC_URL)
+    });
+};
 
 export const getBundlerClient = () => {
     return createPublicClient({

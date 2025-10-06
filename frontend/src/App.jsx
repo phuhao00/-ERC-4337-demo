@@ -9,6 +9,7 @@ import SendTransaction from './components/SendTransaction'
 function App() {
     const { address, isConnected } = useAccount()
     const [smartAccountAddress, setSmartAccountAddress] = useState(null)
+    const [accountSalt, setAccountSalt] = useState(0)
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900">
@@ -58,11 +59,18 @@ function App() {
                         <div className="space-y-8">
                             <AccountCreation
                                 ownerAddress={address}
-                                onAccountCreated={setSmartAccountAddress}
+                                onAccountCreated={(addr, salt) => {
+                                    setSmartAccountAddress(addr)
+                                    setAccountSalt(salt)
+                                }}
                             />
 
                             {smartAccountAddress && (
-                                <AccountInfo accountAddress={smartAccountAddress} />
+                                <AccountInfo
+                                    accountAddress={smartAccountAddress}
+                                    owner={address}
+                                    salt={accountSalt}
+                                />
                             )}
                         </div>
 

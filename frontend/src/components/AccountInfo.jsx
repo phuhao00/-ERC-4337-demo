@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
 
-export default function AccountInfo({ accountAddress }) {
+export default function AccountInfo({ accountAddress, owner, salt }) {
     const [info, setInfo] = useState(null)
     const [loading, setLoading] = useState(false)
+    const [deploying, setDeploying] = useState(false)
     const [error, setError] = useState(null)
+    const [deployResult, setDeployResult] = useState(null)
 
     const fetchAccountInfo = async () => {
         setLoading(true)
@@ -22,6 +24,34 @@ export default function AccountInfo({ accountAddress }) {
             setError(err.message)
         } finally {
             setLoading(false)
+        }
+    }
+
+    const deployAccount = async () => {
+        setDeploying(true)
+        setError(null)
+        setDeployResult(null)
+
+        try {
+            const response = await fetch('/api/account/deploy', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ owner, salt: salt || 0 })
+            })
+
+            const data = await response.json()
+
+            if (!response.ok) {
+                throw new Error(data.error || data.message || 'Failed to deploy account')
+            }
+
+            setDeployResult(data)
+            // Refresh account info after deployment
+            await fetchAccountInfo()
+        } catch (err) {
+            setError(err.message)
+        } finally {
+            setDeploying(false)
         }
     }
 
@@ -92,10 +122,36 @@ export default function AccountInfo({ accountAddress }) {
                 )}
 
                 {!info.isDeployed && (
-                    <div className="p-3 bg-blue-500/10 border border-blue-500/50 rounded-lg">
-                        <p className="text-blue-400 text-sm">
-                            ℹ️ Account will be deployed with the first transaction
-                        </p>
+                    <>
+                        <div className="p-3 bg-blue-500/10 border border-blue-500/50 rounded-lg">
+                            <p className="text-blue-400 text-sm">
+                                ℹ️ Account will be deployed with the first transaction
+                            </p>
+                        </div>
+
+                        <button
+                            onClick={deployAccount}
+                            disabled={deploying || !owner}
+                            className="w-full px-4 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:from-gray-600 disabled:to-gray-600 text-white rounded-lg font-medium transition-all"
+                        >
+                            {deploying ? '🚀 Deploying...' : '🚀 Deploy Account Now'}
+                        </button>
+                    </>
+                )}
+
+                {deployResult && (
+                    <div className="p-3 bg-green-500/10 border border-green-500/50 rounded-lg space-y-2">
+                        <p className="text-green-400 font-semibold">✅ Account Deployed!</p>
+                        <div>
+                            <span className="text-gray-400 text-xs">Transaction Hash:</span>
+                            <p className="text-green-300 font-mono text-xs break-all">
+                                {deployResult.transactionHash}
+                            </p>
+                        </div>
+                        <div>
+                            <span className="text-gray-400 text-xs">Block Number:</span>
+                            <p className="text-green-300 text-xs">{deployResult.blockNumber}</p>
+                        </div>
                     </div>
                 )}
             </div>
