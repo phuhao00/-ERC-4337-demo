@@ -1,0 +1,9 @@
+{
+    "network": "localhost",
+    "chainId": "31337",
+    "entryPoint": "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789",
+    "factory": "DEPLOY_AND_UPDATE_THIS",
+    "accountImplementation": "DEPLOY_AND_UPDATE_THIS",
+    "paymaster": "DEPLOY_AND_UPDATE_THIS",
+    "paymasterSigner": "DEPLOY_AND_UPDATE_THIS"
+}

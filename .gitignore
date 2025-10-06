@@ -1,0 +1,38 @@
+# Environment template - DO NOT commit with real values
+node_modules/
+.env
+.env.local
+*.log
+dist/
+build/
+cache/
+artifacts/
+coverage/
+*.swp
+*.swo
+.DS_Store
+.idea/
+.vscode/
+*.sublime-*
+
+# Hardhat files
+contracts/cache
+contracts/artifacts
+contracts/node_modules
+contracts/.env
+
+# Backend files
+backend/node_modules
+backend/.env
+backend/dist
+
+# Frontend files
+frontend/node_modules
+frontend/.env
+frontend/.env.local
+frontend/dist
+frontend/build
+
+# OS files
+Thumbs.db
+*.log

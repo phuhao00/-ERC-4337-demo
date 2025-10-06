@@ -1,0 +1,95 @@
+// SPDX-License-Identifier: GPL-3.0
+pragma solidity ^0.8.23;
+
+import "@account-abstraction/contracts/core/BasePaymaster.sol";
+import "@account-abstraction/contracts/interfaces/PackedUserOperation.sol";
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+
+/**
+ * @title VerifyingPaymaster
+ * @dev A paymaster that uses external service to decide whether to pay for the UserOp
+ * The paymaster trusts an external signer to sign the transaction
+ */
+contract VerifyingPaymaster is BasePaymaster {
+    using ECDSA for bytes32;
+
+    address public verifyingSigner;
+
+    uint256 private constant VALID_TIMESTAMP_OFFSET = 20;
+    uint256 private constant SIGNATURE_OFFSET = 84;
+
+    event SignerChanged(address indexed oldSigner, address indexed newSigner);
+
+    constructor(IEntryPoint anEntryPoint, address aVerifyingSigner) BasePaymaster(anEntryPoint) {
+        _setVerifyingSigner(aVerifyingSigner);
+    }
+
+    /**
+     * @dev Set a new verifying signer address
+     */
+    function setVerifyingSigner(address newSigner) external onlyOwner {
+        _setVerifyingSigner(newSigner);
+    }
+
+    function _setVerifyingSigner(address newSigner) internal {
+        require(newSigner != address(0), "VerifyingPaymaster: new signer is zero address");
+        address oldSigner = verifyingSigner;
+        verifyingSigner = newSigner;
+        emit SignerChanged(oldSigner, newSigner);
+    }
+
+    /**
+     * @dev Return the hash we're going to sign off-chain (and validate on-chain)
+     */
+    function getHash(PackedUserOperation calldata userOp, uint48 validUntil, uint48 validAfter)
+    public view returns (bytes32) {
+        // Extract sender from packed format
+        address sender = address(uint160(bytes20(userOp.sender)));
+        
+        return keccak256(abi.encode(
+            sender,
+            userOp.nonce,
+            keccak256(userOp.initCode),
+            keccak256(userOp.callData),
+            userOp.accountGasLimits,
+            userOp.preVerificationGas,
+            userOp.gasFees,
+            block.chainid,
+            address(this),
+            validUntil,
+            validAfter
+        ));
+    }
+
+    /**
+     * @dev Verify the request signature
+     * @param userOp The user operation
+     * @param userOpHash The hash of the user operation
+     * @param maxCost Maximum cost of this transaction
+     */
+    function _validatePaymasterUserOp(PackedUserOperation calldata userOp, bytes32 userOpHash, uint256 maxCost)
+    internal view override returns (bytes memory context, uint256 validationData) {
+        (userOpHash, maxCost); // unused params
+        
+        (uint48 validUntil, uint48 validAfter, bytes calldata signature) = parsePaymasterAndData(userOp.paymasterAndData);
+        
+        require(signature.length == 64 || signature.length == 65, "VerifyingPaymaster: invalid signature length");
+        
+        bytes32 hash = getHash(userOp, validUntil, validAfter).toEthSignedMessageHash();
+        
+        // Check signature
+        if (verifyingSigner != hash.recover(signature)) {
+            return ("", _packValidationData(true, validUntil, validAfter));
+        }
+        
+        // No context needed
+        return ("", _packValidationData(false, validUntil, validAfter));
+    }
+
+    function parsePaymasterAndData(bytes calldata paymasterAndData) public pure returns(uint48 validUntil, uint48 validAfter, bytes calldata signature) {
+        require(paymasterAndData.length >= SIGNATURE_OFFSET, "VerifyingPaymaster: invalid data length");
+        validUntil = uint48(bytes6(paymasterAndData[VALID_TIMESTAMP_OFFSET:VALID_TIMESTAMP_OFFSET+6]));
+        validAfter = uint48(bytes6(paymasterAndData[VALID_TIMESTAMP_OFFSET+6:VALID_TIMESTAMP_OFFSET+12]));
+        signature = paymasterAndData[SIGNATURE_OFFSET:];
+    }
+}

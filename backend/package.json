@@ -1,0 +1,29 @@
+{
+    "name": "aa-backend-api",
+    "version": "1.0.0",
+    "description": "Backend API for Account Abstraction",
+    "main": "src/index.js",
+    "type": "module",
+    "scripts": {
+        "start": "node src/index.js",
+        "dev": "nodemon src/index.js",
+        "test": "jest"
+    },
+    "dependencies": {
+        "@alchemy/aa-alchemy": "^3.11.0",
+        "@alchemy/aa-core": "^3.11.0",
+        "@biconomy/account": "^4.0.0",
+        "@biconomy/paymaster": "^4.0.0",
+        "cors": "^2.8.5",
+        "dotenv": "^16.3.1",
+        "ethers": "^6.10.0",
+        "express": "^4.18.2",
+        "express-validator": "^7.0.1",
+        "helmet": "^7.1.0",
+        "viem": "^2.7.6",
+        "winston": "^3.11.0"
+    },
+    "devDependencies": {
+        "nodemon": "^3.0.2"
+    }
+}

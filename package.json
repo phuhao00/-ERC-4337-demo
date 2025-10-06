@@ -1,0 +1,19 @@
+{
+    "name": "acount002-root",
+    "version": "1.0.0",
+    "private": true,
+    "workspaces": [
+        "contracts",
+        "backend",
+        "frontend"
+    ],
+    "scripts": {
+        "install:all": "npm install && cd contracts && npm install && cd ../backend && npm install && cd ../frontend && npm install",
+        "clean:all": "rm -rf node_modules contracts/node_modules backend/node_modules frontend/node_modules",
+        "deploy:contracts": "cd contracts && npm run deploy:sepolia",
+        "start:backend": "cd backend && npm run dev",
+        "start:frontend": "cd frontend && npm run dev",
+        "build:all": "cd contracts && npm run compile && cd ../frontend && npm run build"
+    },
+    "description": "Account Abstraction (ERC-4337) Full Stack Project"
+}
